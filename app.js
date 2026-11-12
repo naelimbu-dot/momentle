@@ -373,7 +373,9 @@
       : state.mode === "round-ready"
         ? "Tap to start."
         : state.mode === "round-result"
-          ? "Challenge locked in. Use the Next Challenge button to continue."
+          ? state.roundIndex < ROUND_COUNT - 1
+            ? "Tap the playfield or use the Next Challenge button to continue."
+            : "Final challenge locked in."
           : "Today's run is complete.";
     els.playfield.setAttribute("aria-label", `Momentle ${roundLabel}. ${accessibleAction}`);
     if (state.mode === "round-ready") {
@@ -385,9 +387,19 @@
       els.canvasOverlay.classList.add("is-hidden");
       els.canvasStatus.textContent = "Tap anywhere to lock it in.";
     } else if (state.mode === "round-result") {
-      els.canvasOverlay.classList.add("is-hidden");
+      if (state.roundIndex < ROUND_COUNT - 1) {
+        els.canvasOverlay.classList.remove("is-hidden");
+        els.overlayMessage.textContent = "Tap for next challenge";
+        els.overlayHint.textContent = "Your shot is locked in. Keep going.";
+      } else {
+        els.canvasOverlay.classList.add("is-hidden");
+      }
       const result = state.roundResults[state.roundIndex];
-      els.canvasStatus.textContent = result && result.timedOut ? "Time expired. This challenge scored zero." : "Locked in. No retries for this challenge.";
+      if (result && result.timedOut) {
+        els.canvasStatus.textContent = state.roundIndex < ROUND_COUNT - 1 ? "Time expired. Tap the playfield for the next challenge." : "Time expired. This challenge scored zero.";
+      } else {
+        els.canvasStatus.textContent = state.roundIndex < ROUND_COUNT - 1 ? "Locked in. Tap the playfield for the next challenge." : "Locked in. No retries for this challenge.";
+      }
     } else {
       els.canvasOverlay.classList.add("is-hidden");
       els.canvasStatus.textContent = "Today's five moments are complete.";
@@ -547,6 +559,7 @@
   function handlePlayfieldInput() {
     if (state.mode === "round-ready") startRound();
     else if (state.mode === "round-running") freezeRound();
+    else if (state.mode === "round-result") advanceRound();
   }
 
   function handlePlayfieldKey(event) {
