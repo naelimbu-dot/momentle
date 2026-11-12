@@ -11,6 +11,7 @@ Momentle is a frontend-only daily timing game. Each UTC day contains five progre
 - Score-based feedback adds generated sound cues, sparkle bursts for strong shots, enhanced effects from 92/100, a golden celebration at 100/100, and a brief red shake below 50/100 or on timeouts.
 - Accuracy is the average spatial proximity of the five orbs, shown as a percentage.
 - The round score is `round(100 × (accuracy / 100) ^ 1.5)` out of 100.
+- Accuracy of 98.0% or higher is awarded the full 100/100 score, making the perfect tier attainable without changing lower-score scoring.
 - The final report shows each round, a total out of 500, an overall score out of 100, and average accuracy.
 - The distribution curve and percentile are simulated locally until a backend leaderboard exists.
 

@@ -347,7 +347,9 @@
       return { distance, proximity };
     });
     const accuracy = Math.max(0, Math.min(100, details.reduce((sum, item) => sum + item.proximity, 0) / details.length * 100));
-    const score = Math.max(0, Math.min(100, Math.round(100 * Math.pow(accuracy / 100, 1.5))));
+    const score = accuracy >= 98
+      ? 100
+      : Math.max(0, Math.min(100, Math.round(100 * Math.pow(accuracy / 100, 1.5))));
     return { accuracy, score, details };
   }
 
