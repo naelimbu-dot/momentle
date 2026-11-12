@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#08121f" />
     <title>Momentle — Find the perfect moment</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <link rel="stylesheet" href="styles.css?v=4" />
   </head>
   <body>
     <main class="app-shell">
@@ -34,6 +34,10 @@
           <span id="roundIndicator">Challenge 1 of 5</span>
         </div>
         <button class="help-button" id="helpButton" type="button">How to play</button>
+        <button class="help-button sound-button" id="soundButton" type="button" aria-pressed="false" aria-label="Turn sound off">
+          <span aria-hidden="true" id="soundIcon">♪</span>
+          <span id="soundLabel">Sound on</span>
+        </button>
       </section>
 
       <section class="round-progress" aria-label="Daily challenge progress" id="roundProgress"></section>
@@ -41,6 +45,7 @@
       <section class="game-card" aria-label="Momentle game board">
         <div class="canvas-wrap" id="playfield" role="button" tabindex="0" aria-label="Momentle challenge playfield. Tap to start, then tap again to lock in your timing.">
           <canvas id="gameCanvas" aria-hidden="true"></canvas>
+          <div class="effects-layer" id="effectsLayer" aria-hidden="true"></div>
           <div class="canvas-overlay" id="canvasOverlay">
             <div class="overlay-card">
               <span class="overlay-kicker">CHALLENGE 1 OF 5</span>
@@ -128,6 +133,6 @@
         </div>
       </div>
     </dialog>
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
   </body>
 </html>

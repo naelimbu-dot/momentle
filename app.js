@@ -7,6 +7,7 @@
   const ROUND_TIME_LIMIT_MS = 25000;
   const STORAGE_PREFIX = "momentle-v3-progress-";
   const TUTORIAL_KEY = "momentle-tutorial-seen-v1";
+  const SOUND_KEY = "momentle-sound-enabled-v1";
   const ROUND_DIFFICULTY = [
     { loopMs: 3800, decoyOrbs: 1, label: "Fast" },
     { loopMs: 3300, decoyOrbs: 2, label: "Faster" },
@@ -55,9 +56,13 @@
     scoreTable: document.getElementById("scoreTable"),
     percentileText: document.getElementById("percentileText"),
     copyButton: document.getElementById("copyButton"),
+    effectsLayer: document.getElementById("effectsLayer"),
     timerBadge: document.getElementById("timerBadge"),
     timerValue: document.getElementById("timerValue"),
     helpButton: document.getElementById("helpButton"),
+    soundButton: document.getElementById("soundButton"),
+    soundIcon: document.getElementById("soundIcon"),
+    soundLabel: document.getElementById("soundLabel"),
     tutorialDialog: document.getElementById("tutorialDialog"),
     tutorialClose: document.getElementById("tutorialClose"),
     tutorialSkip: document.getElementById("tutorialSkip"),
@@ -79,11 +84,21 @@
     displayElapsed: 0,
     tutorialStep: 0,
     urgentTimerAnnounced: false,
+    lastTimerTick: null,
+    soundEnabled: true,
+    audioContext: null,
+    effectTimeout: null,
     animationFrame: null,
     dpr: 1,
     width: 0,
     height: 0
   };
+
+  try {
+    state.soundEnabled = localStorage.getItem(SOUND_KEY) !== "off";
+  } catch (_) {
+    state.soundEnabled = true;
+  }
 
   const dateKey = new Date().toISOString().slice(0, 10);
   const puzzleNumber = daysSinceEpoch(dateKey);
@@ -356,6 +371,125 @@
   function formatScore(score) { return `${Math.round(score)}/100`; }
   function formatAccuracy(accuracy) { return `${accuracy.toFixed(1)}%`; }
 
+  function updateSoundButton() {
+    els.soundButton.setAttribute("aria-pressed", String(state.soundEnabled));
+    els.soundButton.setAttribute("aria-label", state.soundEnabled ? "Turn sound off" : "Turn sound on");
+    els.soundIcon.textContent = state.soundEnabled ? "♪" : "×";
+    els.soundLabel.textContent = state.soundEnabled ? "Sound on" : "Sound off";
+  }
+
+  function ensureAudio() {
+    if (!state.soundEnabled) return null;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!state.audioContext) state.audioContext = new AudioContextClass();
+    if (state.audioContext.state === "suspended") state.audioContext.resume().catch(() => {});
+    return state.audioContext;
+  }
+
+  function playTone(frequency, duration, options = {}) {
+    const audio = ensureAudio();
+    if (!audio) return;
+    const when = audio.currentTime + (options.delay || 0);
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = options.type || "sine";
+    oscillator.frequency.setValueAtTime(frequency, when);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, options.endFrequency || frequency), when + duration);
+    gain.gain.setValueAtTime(.0001, when);
+    gain.gain.exponentialRampToValueAtTime(options.volume || .045, when + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, when + duration);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(when);
+    oscillator.stop(when + duration + .02);
+  }
+
+  function playStartSound() {
+    playTone(260, .12, { volume: .025, endFrequency: 390 });
+    playTone(520, .1, { delay: .06, volume: .018, endFrequency: 620 });
+  }
+
+  function playAdvanceSound() {
+    playTone(330, .1, { volume: .024, endFrequency: 440 });
+    playTone(550, .13, { delay: .065, volume: .022, endFrequency: 660 });
+  }
+
+  function playTimerTick(second) {
+    playTone(second === 1 ? 920 : 720, .055, { volume: second === 1 ? .038 : .022, type: "triangle", endFrequency: second === 1 ? 760 : 660 });
+  }
+
+  function playShotSound(result) {
+    if (result.timedOut) {
+      playTone(190, .24, { volume: .05, type: "sawtooth", endFrequency: 105 });
+      playTone(120, .26, { delay: .13, volume: .035, type: "triangle", endFrequency: 82 });
+    } else if (result.accuracy >= 95) {
+      [523, 659, 784, 1047].forEach((frequency, index) => playTone(frequency, .34, { delay: index * .055, volume: .035, type: index === 3 ? "triangle" : "sine", endFrequency: frequency * 1.04 }));
+    } else if (result.accuracy >= 80) {
+      [440, 554, 659].forEach((frequency, index) => playTone(frequency, .27, { delay: index * .065, volume: .032, endFrequency: frequency * 1.03 }));
+    } else if (result.accuracy >= 60) {
+      playTone(350, .2, { volume: .028, endFrequency: 440 });
+      playTone(523, .2, { delay: .08, volume: .024, endFrequency: 590 });
+    } else if (result.accuracy >= 50) {
+      playTone(300, .16, { volume: .024, type: "triangle", endFrequency: 330 });
+    } else {
+      playTone(170, .22, { volume: .045, type: "square", endFrequency: 112 });
+      playTone(105, .18, { delay: .1, volume: .028, type: "sawtooth", endFrequency: 78 });
+    }
+  }
+
+  function toggleSound() {
+    state.soundEnabled = !state.soundEnabled;
+    try { localStorage.setItem(SOUND_KEY, state.soundEnabled ? "on" : "off"); } catch (_) {}
+    updateSoundButton();
+    if (state.soundEnabled) {
+      ensureAudio();
+      playTone(440, .12, { volume: .026, endFrequency: 660 });
+    }
+  }
+
+  function clearShotEffects() {
+    if (state.effectTimeout) window.clearTimeout(state.effectTimeout);
+    state.effectTimeout = null;
+    els.playfield.classList.remove("good-shot", "okay-shot", "bad-shot");
+    els.effectsLayer.replaceChildren();
+  }
+
+  function addSparkles(position, colour, count) {
+    const point = normalizedToCanvas(position);
+    for (let index = 0; index < count; index += 1) {
+      const angle = Math.PI * 2 * index / count + (index % 2) * .18;
+      const distance = 24 + (index % 3) * 11;
+      const sparkle = document.createElement("span");
+      sparkle.className = `sparkle${index % 3 === 0 ? " star" : ""}`;
+      sparkle.style.left = `${point.x}px`;
+      sparkle.style.top = `${point.y}px`;
+      sparkle.style.setProperty("--sparkle-colour", colour);
+      sparkle.style.setProperty("--sparkle-x", `${Math.cos(angle) * distance}px`);
+      sparkle.style.setProperty("--sparkle-y", `${Math.sin(angle) * distance}px`);
+      sparkle.style.setProperty("--sparkle-delay", `${(index % 4) * 22}ms`);
+      els.effectsLayer.appendChild(sparkle);
+    }
+  }
+
+  function showShotEffects(result, positions) {
+    clearShotEffects();
+    if (result.timedOut || result.accuracy < 50) {
+      els.playfield.classList.add("bad-shot");
+    } else if (result.accuracy >= 75) {
+      els.playfield.classList.add("good-shot");
+      result.details.forEach((detail, index) => {
+        if (detail.proximity >= .48) addSparkles(positions[index], getCurrentRound().orbs[index].colour.value, result.accuracy >= 95 ? 8 : 5);
+      });
+      const ring = document.createElement("span");
+      ring.className = "shot-ring";
+      els.effectsLayer.appendChild(ring);
+    } else {
+      els.playfield.classList.add("okay-shot");
+    }
+    state.effectTimeout = window.setTimeout(clearShotEffects, 900);
+  }
+
   function renderProgress() {
     els.roundProgress.innerHTML = state.roundResults.map((result, index) => {
       const status = result ? "complete" : index === state.roundIndex && state.mode !== "finished" ? "current" : "";
@@ -422,12 +556,17 @@
 
   function updateTimer(remainingMs) {
     const safeRemaining = Math.max(0, remainingMs);
+    const remainingSecond = Math.ceil(safeRemaining / 1000);
     els.timerValue.textContent = (safeRemaining / 1000).toFixed(1);
     els.timerBadge.classList.toggle("is-running", state.mode === "round-running");
     els.timerBadge.classList.toggle("is-urgent", state.mode === "round-running" && safeRemaining <= 5000);
     if (state.mode === "round-running" && safeRemaining <= 5000 && !state.urgentTimerAnnounced) {
       state.urgentTimerAnnounced = true;
       els.canvasStatus.textContent = "Five seconds left. Tap to lock it in.";
+    }
+    if (state.mode === "round-running" && remainingSecond > 0 && remainingSecond <= 5 && state.lastTimerTick !== remainingSecond) {
+      state.lastTimerTick = remainingSecond;
+      playTimerTick(remainingSecond);
     }
   }
 
@@ -503,15 +642,18 @@
 
   function startRound() {
     if (state.mode !== "round-ready" || state.roundResults[state.roundIndex]) return;
+    clearShotEffects();
     state.displayElapsed = 0;
     state.runningStartedAt = performance.now();
     state.urgentTimerAnnounced = false;
+    state.lastTimerTick = null;
     state.mode = "round-running";
     els.roundResult.hidden = true;
     els.nextRow.hidden = true;
     updateOverlay();
     updateTimer(ROUND_TIME_LIMIT_MS);
     renderProgress();
+    playStartSound();
     cancelAnimation();
     state.animationFrame = requestAnimationFrame(animationLoop);
   }
@@ -519,12 +661,15 @@
   function completeRound(timedOut) {
     if (state.mode !== "round-running") return;
     cancelAnimation();
-    const result = scorePositions(getPositions(state.displayElapsed));
+    const positions = getPositions(state.displayElapsed);
+    const result = scorePositions(positions);
     result.timedOut = timedOut;
     if (timedOut) result.score = 0;
     state.roundResults[state.roundIndex] = result;
     state.mode = "round-result";
     drawScene(state.displayElapsed, true);
+    showShotEffects(result, positions);
+    playShotSound(result);
     renderRoundResult(result);
     updateTimer(timedOut ? 0 : Math.max(0, ROUND_TIME_LIMIT_MS - state.displayElapsed));
     saveProgress();
@@ -548,10 +693,13 @@
 
   function advanceRound() {
     if (state.mode !== "round-result" || state.roundIndex >= ROUND_COUNT - 1) return;
+    playAdvanceSound();
+    clearShotEffects();
     state.roundIndex += 1;
     state.displayElapsed = 0;
     state.mode = "round-ready";
     state.urgentTimerAnnounced = false;
+    state.lastTimerTick = null;
     els.roundResult.hidden = true;
     els.nextRow.hidden = true;
     updateOverlay();
@@ -640,6 +788,7 @@
   els.nextButton.addEventListener("click", advanceRound);
   els.copyButton.addEventListener("click", copyResult);
   els.helpButton.addEventListener("click", openTutorial);
+  els.soundButton.addEventListener("click", toggleSound);
   els.tutorialClose.addEventListener("click", closeTutorial);
   els.tutorialSkip.addEventListener("click", closeTutorial);
   els.tutorialNext.addEventListener("click", advanceTutorial);
@@ -647,6 +796,7 @@
   window.addEventListener("resize", resizeCanvas);
 
   els.puzzleNumber.textContent = `#${String(puzzleNumber).padStart(3, "0")}`;
+  updateSoundButton();
   loadProgress();
   renderProgress();
   updateOverlay();
