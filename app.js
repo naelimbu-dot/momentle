@@ -423,7 +423,10 @@
     if (result.timedOut) {
       playTone(190, .24, { volume: .05, type: "sawtooth", endFrequency: 105 });
       playTone(120, .26, { delay: .13, volume: .035, type: "triangle", endFrequency: 82 });
-    } else if (result.accuracy >= 95) {
+    } else if (result.score === 100) {
+      [392, 523, 659, 784, 988, 1319].forEach((frequency, index) => playTone(frequency, .48, { delay: index * .065, volume: index > 3 ? .038 : .032, type: index % 2 ? "triangle" : "sine", endFrequency: frequency * 1.045 }));
+      playTone(196, .9, { volume: .022, type: "sine", endFrequency: 294 });
+    } else if (result.score >= 92) {
       [523, 659, 784, 1047].forEach((frequency, index) => playTone(frequency, .34, { delay: index * .055, volume: .035, type: index === 3 ? "triangle" : "sine", endFrequency: frequency * 1.04 }));
     } else if (result.accuracy >= 80) {
       [440, 554, 659].forEach((frequency, index) => playTone(frequency, .27, { delay: index * .065, volume: .032, endFrequency: frequency * 1.03 }));
@@ -451,7 +454,7 @@
   function clearShotEffects() {
     if (state.effectTimeout) window.clearTimeout(state.effectTimeout);
     state.effectTimeout = null;
-    els.playfield.classList.remove("good-shot", "okay-shot", "bad-shot");
+    els.playfield.classList.remove("perfect-shot", "great-shot", "good-shot", "okay-shot", "bad-shot");
     els.effectsLayer.replaceChildren();
   }
 
@@ -472,22 +475,74 @@
     }
   }
 
+  function addShotRing(className = "") {
+    const ring = document.createElement("span");
+    ring.className = `shot-ring ${className}`.trim();
+    els.effectsLayer.appendChild(ring);
+  }
+
+  function addCelebrationLabel(text, className) {
+    const label = document.createElement("span");
+    label.className = `celebration-label ${className}`;
+    label.textContent = text;
+    els.effectsLayer.appendChild(label);
+  }
+
+  function addGoldenConfetti(count) {
+    const colours = ["#ffd166", "#ffe7a3", "#ffb84d", "#fff7cf"];
+    for (let index = 0; index < count; index += 1) {
+      const confetti = document.createElement("span");
+      confetti.className = "gold-confetti";
+      confetti.style.left = `${4 + (index * 37 % 92)}%`;
+      confetti.style.setProperty("--confetti-colour", colours[index % colours.length]);
+      confetti.style.setProperty("--confetti-drift", `${-30 + (index * 19 % 61)}px`);
+      confetti.style.setProperty("--confetti-turn", `${180 + (index % 5) * 90}deg`);
+      confetti.style.setProperty("--confetti-delay", `${(index % 9) * 38}ms`);
+      els.effectsLayer.appendChild(confetti);
+    }
+  }
+
+  function getShotTier(result) {
+    if (result.timedOut || result.score < 50) return "bad";
+    if (result.score === 100) return "perfect";
+    if (result.score >= 92) return "great";
+    if (result.accuracy >= 75) return "good";
+    return "okay";
+  }
+
   function showShotEffects(result, positions) {
     clearShotEffects();
-    if (result.timedOut || result.score < 50) {
+    const tier = getShotTier(result);
+    let duration = 900;
+    if (tier === "bad") {
       els.playfield.classList.add("bad-shot");
-    } else if (result.accuracy >= 75) {
+    } else if (tier === "perfect") {
+      duration = 1800;
+      els.playfield.classList.add("perfect-shot");
+      positions.forEach((position) => addSparkles(position, "#ffd166", 10));
+      addShotRing("gold-ring");
+      addShotRing("gold-ring ring-delay");
+      addGoldenConfetti(34);
+      addCelebrationLabel("PERFECT 100", "gold-label");
+    } else if (tier === "great") {
+      duration = 1250;
+      els.playfield.classList.add("great-shot");
+      result.details.forEach((detail, index) => {
+        if (detail.proximity >= .48) addSparkles(positions[index], getCurrentRound().orbs[index].colour.value, 9);
+      });
+      addShotRing("elite-ring");
+      addShotRing("elite-ring ring-delay");
+      addCelebrationLabel("INCREDIBLE", "elite-label");
+    } else if (tier === "good") {
       els.playfield.classList.add("good-shot");
       result.details.forEach((detail, index) => {
-        if (detail.proximity >= .48) addSparkles(positions[index], getCurrentRound().orbs[index].colour.value, result.accuracy >= 95 ? 8 : 5);
+        if (detail.proximity >= .48) addSparkles(positions[index], getCurrentRound().orbs[index].colour.value, 5);
       });
-      const ring = document.createElement("span");
-      ring.className = "shot-ring";
-      els.effectsLayer.appendChild(ring);
+      addShotRing();
     } else {
       els.playfield.classList.add("okay-shot");
     }
-    state.effectTimeout = window.setTimeout(clearShotEffects, 900);
+    state.effectTimeout = window.setTimeout(clearShotEffects, duration);
   }
 
   function renderProgress() {

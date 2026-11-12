@@ -8,7 +8,7 @@ Momentle is a frontend-only daily timing game. Each UTC day contains five progre
 - Each challenge has exactly one scored attempt and no retries.
 - Each challenge has a 20-second limit. Running out of time scores zero points.
 - The loop becomes faster and adds more decoy alignments in every round. A decoy places one orb perfectly in its ring while the others are still out of position.
-- Accuracy-based feedback adds generated sound cues, sparkle bursts for strong shots, and a brief red shake for poor shots or timeouts.
+- Score-based feedback adds generated sound cues, sparkle bursts for strong shots, enhanced effects from 92/100, a golden celebration at 100/100, and a brief red shake below 50/100 or on timeouts.
 - Accuracy is the average spatial proximity of the five orbs, shown as a percentage.
 - The round score is `round(100 × (accuracy / 100) ^ 1.5)` out of 100.
 - The final report shows each round, a total out of 500, an overall score out of 100, and average accuracy.

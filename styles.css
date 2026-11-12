@@ -64,6 +64,9 @@ h2 { margin: 0; max-width: 680px; font-size: clamp(2rem, 5vw, 3.65rem); line-hei
 .game-card { padding: 14px; }
 .canvas-wrap { position: relative; overflow: hidden; aspect-ratio: 1.65 / 1; min-height: 300px; border-radius: 17px; background: #081522; cursor: pointer; touch-action: none; user-select: none; }
 .canvas-wrap::after { position: absolute; z-index: 1; inset: 0; content: ""; border-radius: inherit; opacity: 0; pointer-events: none; }
+.canvas-wrap.perfect-shot { animation: perfect-glow 1.65s ease-out; }
+.canvas-wrap.perfect-shot::after { animation: perfect-flash 1.4s ease-out; background: radial-gradient(circle, rgba(255,226,122,.38), rgba(255,180,45,.13) 42%, transparent 72%); box-shadow: inset 0 0 0 2px rgba(255,209,102,.5), inset 0 0 70px rgba(255,184,55,.22); }
+.canvas-wrap.great-shot::after { animation: great-flash 1.05s ease-out; background: radial-gradient(circle at 35% 45%, rgba(94,231,196,.25), transparent 48%), radial-gradient(circle at 68% 48%, rgba(179,154,255,.27), transparent 52%); box-shadow: inset 0 0 0 1px rgba(179,154,255,.45); }
 .canvas-wrap.good-shot::after { animation: good-flash .72s ease-out; background: radial-gradient(circle, rgba(94,231,196,.22), transparent 67%); }
 .canvas-wrap.okay-shot::after { animation: okay-flash .55s ease-out; background: radial-gradient(circle, rgba(123,199,255,.14), transparent 70%); }
 .canvas-wrap.bad-shot { animation: board-shake .46s ease-out; }
@@ -74,6 +77,16 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .sparkle.star { width: 3px; height: 12px; margin: -6px 0 0 -1.5px; border-radius: 99px; }
 .sparkle.star::after { position: absolute; inset: 4.5px -4.5px; content: ""; border-radius: 99px; background: inherit; box-shadow: inherit; }
 .shot-ring { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px; border: 2px solid rgba(94,231,196,.76); border-radius: 50%; opacity: 0; animation: shot-ring .75s ease-out both; }
+.shot-ring.elite-ring { border-color: #b39aff; box-shadow: 0 0 20px rgba(94,231,196,.55), inset 0 0 16px rgba(179,154,255,.32); animation-duration: 1.05s; }
+.shot-ring.gold-ring { border-color: #ffd166; border-width: 3px; box-shadow: 0 0 28px rgba(255,209,102,.72), inset 0 0 20px rgba(255,184,77,.32); animation-duration: 1.35s; }
+.shot-ring.ring-delay { animation-delay: .16s; }
+.gold-confetti { position: absolute; top: -14px; width: 5px; height: 11px; border-radius: 2px; background: var(--confetti-colour); box-shadow: 0 0 8px var(--confetti-colour); opacity: 0; animation: gold-confetti 1.55s cubic-bezier(.12,.62,.25,1) var(--confetti-delay) both; }
+.celebration-label { position: absolute; left: 50%; top: 43%; padding: 8px 14px; border-radius: 99px; font-size: clamp(.75rem, 2.2vw, 1.05rem); font-weight: 900; letter-spacing: .16em; white-space: nowrap; opacity: 0; transform: translate(-50%, -50%); animation: celebration-label 1.15s ease-out both; }
+.celebration-label.elite-label { border: 1px solid rgba(179,154,255,.75); background: rgba(15,18,40,.82); color: #d9cdff; box-shadow: 0 0 28px rgba(94,231,196,.25), 0 0 42px rgba(179,154,255,.2); }
+.celebration-label.gold-label { border: 1px solid rgba(255,209,102,.82); background: rgba(35,25,7,.86); color: #ffe7a3; box-shadow: 0 0 36px rgba(255,209,102,.48); animation-duration: 1.5s; }
+.perfect-shot .canvas-overlay.is-result .overlay-card { border-color: rgba(255,209,102,.62); background: rgba(34,24,6,.82); box-shadow: 0 0 28px rgba(255,209,102,.2); }
+.perfect-shot .canvas-overlay.is-result .overlay-kicker, .perfect-shot .canvas-overlay.is-result .overlay-card > span:last-child { color: #ffe7a3; }
+.great-shot .canvas-overlay.is-result .overlay-card { border-color: rgba(179,154,255,.54); box-shadow: 0 0 26px rgba(179,154,255,.14); }
 .canvas-overlay { position: absolute; z-index: 3; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(8,21,34,.08), rgba(8,21,34,.42)); text-align: center; pointer-events: none; transition: opacity .2s ease; }
 .canvas-overlay.is-hidden { opacity: 0; }
 .overlay-card { display: flex; min-width: min(84%, 340px); flex-direction: column; align-items: center; gap: 9px; padding: 20px 24px; border: 1px solid rgba(94,231,196,.42); border-radius: 18px; background: rgba(5,17,29,.88); box-shadow: 0 18px 45px rgba(0,0,0,.38), inset 0 0 34px rgba(94,231,196,.035); backdrop-filter: blur(10px); }
@@ -153,6 +166,22 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   0% { opacity: .9; transform: scale(.35); }
   100% { opacity: 0; transform: scale(5); }
 }
+@keyframes gold-confetti {
+  0% { opacity: 0; transform: translate(0, -12px) rotate(0deg); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--confetti-drift), 430px) rotate(var(--confetti-turn)); }
+}
+@keyframes celebration-label {
+  0% { opacity: 0; transform: translate(-50%, -42%) scale(.7); }
+  18%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -58%) scale(1.08); }
+}
+@keyframes perfect-glow {
+  0%, 100% { box-shadow: none; }
+  24%, 65% { box-shadow: 0 0 0 2px rgba(255,209,102,.6), 0 0 42px rgba(255,184,77,.38); }
+}
+@keyframes perfect-flash { 0% { opacity: 0; } 15%, 42% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes great-flash { 0% { opacity: 0; } 18%, 40% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes good-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes okay-flash { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes bad-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
@@ -190,6 +219,6 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .canvas-overlay, .secondary-button, .text-button, .help-button { transition: none; }
-  .canvas-wrap.bad-shot { animation: none; }
-  .sparkle, .shot-ring { display: none; }
+  .canvas-wrap.bad-shot, .canvas-wrap.perfect-shot { animation: none; }
+  .sparkle, .shot-ring, .gold-confetti, .celebration-label { display: none; }
 }
