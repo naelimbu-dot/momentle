@@ -1,10 +1,12 @@
 # Momentle
 
-Momentle is a frontend-only daily timing game. Each UTC day contains five progressively harder orb-alignment challenges. Tap the playfield once to start a challenge, then tap again when every orb is closest to its matching ring.
+Momentle is a frontend-only timing game with Daily and Endless modes. Each UTC day contains one shared five-challenge Daily run, while Endless mode generates replayable sets of five. Tap the playfield once to start a challenge, then tap again when every orb is closest to its matching ring.
 
 ## Rules and scoring
 
 - You get five challenges per UTC day.
+- Endless mode generates unlimited five-challenge sets and offers **Play Another Set** after every summary.
+- Every Daily or Endless set uses the same deliberate difficulty ramp: faster loops and more decoy orbs from challenge one through five.
 - Each challenge has exactly one scored attempt and no retries.
 - Each challenge has a 20-second limit. Running out of time scores zero points.
 - The loop becomes faster and adds more decoy alignments in every round. A decoy places one orb perfectly in its ring while the others are still out of position.
@@ -22,14 +24,17 @@ Momentle is a frontend-only daily timing game. Each UTC day contains five progre
 - Use Enter or Space while the playfield is focused for keyboard control.
 - Select **Next Challenge** after each result.
 - Select **Copy Result** after challenge five to copy a spoiler-free summary.
+- Use the **Daily / Endless** switch to change modes. Switching modes preserves each mode's separate progress.
 - New players are offered a three-step tutorial, which can be reopened with **How to play**.
 - Use **Sound on/off** to control effects. The preference is remembered locally, and no audio files are downloaded.
 
 ## Daily seed and persistence
 
-The current UTC date (`YYYY-MM-DD`) and round number are hashed into deterministic seeds in the form `YYYY-MM-DD:round:1` through `YYYY-MM-DD:round:5`. The same date produces the same five challenges for everyone.
+The current UTC date (`YYYY-MM-DD`) and round number are hashed into Daily seeds in the form `YYYY-MM-DD:round:1` through `YYYY-MM-DD:round:5`. The same date produces the same five Daily challenges for everyone, and a new Daily run appears automatically at midnight UTC.
 
-Progress is stored locally under the versioned `momentle-v3-progress-YYYY-MM-DD` key. Tutorial completion is also remembered locally. No server, account, API, or database is used.
+Endless mode creates one random session seed with `crypto.getRandomValues()`, then deterministically derives each set and round from `endless:{seed}:set:{number}:round:{number}`. This produces unlimited distinct sets without hard-coded challenges.
+
+Daily progress is stored under `momentle-v3-progress-YYYY-MM-DD`. Endless progress, its seed, and current set number use a separate localStorage key. Tutorial, sound, and selected-mode preferences are also remembered locally. No server, account, API, or database is used.
 
 ## Run locally
 

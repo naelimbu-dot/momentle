@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#08121f" />
     <title>Momentle — Find the perfect moment</title>
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <main class="app-shell">
@@ -13,15 +13,20 @@
         <div class="brand-lockup">
           <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
           <div>
-            <p class="eyebrow">A daily timing game</p>
+            <p class="eyebrow" id="brandEyebrow">A daily timing game</p>
             <h1>MOMENTLE</h1>
           </div>
         </div>
         <div class="puzzle-meta">
-          <span class="meta-label">DAILY PUZZLE</span>
+          <span class="meta-label" id="metaLabel">DAILY PUZZLE</span>
           <strong id="puzzleNumber">#001</strong>
         </div>
       </header>
+
+      <nav class="mode-switch" aria-label="Game mode">
+        <button class="mode-button is-active" id="dailyModeButton" type="button" aria-pressed="true">Daily</button>
+        <button class="mode-button" id="endlessModeButton" type="button" aria-pressed="false">Endless</button>
+      </nav>
 
       <section class="intro" aria-labelledby="gameTitle">
         <div>
@@ -78,7 +83,7 @@
 
       <section class="final-panel" id="finalPanel" hidden aria-labelledby="finalTitle">
         <div class="final-copy">
-          <p class="kicker">Today's run</p>
+          <p class="kicker" id="finalKicker">Today's run</p>
           <h2 id="finalTitle">Five moments, captured.</h2>
           <p id="finalSubline">Your daily timing report is ready.</p>
         </div>
@@ -106,11 +111,12 @@
         </div>
 
         <div class="final-actions">
+          <button class="secondary-button" id="playAgainButton" type="button" hidden>Play Another Set</button>
           <button class="text-button" id="copyButton" type="button">Copy Result</button>
         </div>
       </section>
 
-      <footer class="footer-note">New set of five every day at midnight UTC.</footer>
+      <footer class="footer-note" id="footerNote">New set of five every day at midnight UTC.</footer>
     </main>
 
     <dialog class="tutorial" id="tutorialDialog" aria-labelledby="tutorialTitle">
@@ -132,6 +138,6 @@
         </div>
       </div>
     </dialog>
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
   </body>
 </html>

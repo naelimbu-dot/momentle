@@ -6,6 +6,8 @@
   const START_LOCK_MS = 300;
   const ROUND_TIME_LIMIT_MS = 20000;
   const STORAGE_PREFIX = "momentle-v3-progress-";
+  const ENDLESS_STORAGE_KEY = "momentle-endless-progress-v1";
+  const MODE_KEY = "momentle-game-mode-v1";
   const TUTORIAL_KEY = "momentle-tutorial-seen-v1";
   const SOUND_KEY = "momentle-sound-enabled-v1";
   const ROUND_DIFFICULTY = [
@@ -37,7 +39,11 @@
     overlayMessage: document.getElementById("overlayMessage"),
     overlayHint: document.getElementById("overlayHint"),
     canvasStatus: document.getElementById("canvasStatus"),
+    brandEyebrow: document.getElementById("brandEyebrow"),
+    metaLabel: document.getElementById("metaLabel"),
     puzzleNumber: document.getElementById("puzzleNumber"),
+    dailyModeButton: document.getElementById("dailyModeButton"),
+    endlessModeButton: document.getElementById("endlessModeButton"),
     roundIndicator: document.getElementById("roundIndicator"),
     roundProgress: document.getElementById("roundProgress"),
     roundResult: document.getElementById("roundResult"),
@@ -50,12 +56,17 @@
     nextMessage: document.getElementById("nextMessage"),
     nextButton: document.getElementById("nextButton"),
     finalPanel: document.getElementById("finalPanel"),
+    finalKicker: document.getElementById("finalKicker"),
+    finalTitle: document.getElementById("finalTitle"),
+    finalSubline: document.getElementById("finalSubline"),
     finalTotalScore: document.getElementById("finalTotalScore"),
     finalOverallScore: document.getElementById("finalOverallScore"),
     finalAverageAccuracy: document.getElementById("finalAverageAccuracy"),
     scoreTable: document.getElementById("scoreTable"),
     percentileText: document.getElementById("percentileText"),
+    playAgainButton: document.getElementById("playAgainButton"),
     copyButton: document.getElementById("copyButton"),
+    footerNote: document.getElementById("footerNote"),
     effectsLayer: document.getElementById("effectsLayer"),
     timerBadge: document.getElementById("timerBadge"),
     timerValue: document.getElementById("timerValue"),
@@ -76,6 +87,7 @@
   const ctx = els.canvas.getContext("2d");
   const distributionCtx = els.distributionCanvas.getContext("2d");
   const state = {
+    gameMode: "daily",
     mode: "round-ready",
     roundIndex: 0,
     rounds: [],
@@ -88,6 +100,8 @@
     soundEnabled: true,
     audioContext: null,
     effectTimeout: null,
+    endlessSeed: "",
+    endlessSetNumber: 1,
     animationFrame: null,
     dpr: 1,
     width: 0,
@@ -96,8 +110,10 @@
 
   try {
     state.soundEnabled = localStorage.getItem(SOUND_KEY) !== "off";
+    state.gameMode = localStorage.getItem(MODE_KEY) === "endless" ? "endless" : "daily";
   } catch (_) {
     state.soundEnabled = true;
+    state.gameMode = "daily";
   }
 
   const dateKey = new Date().toISOString().slice(0, 10);
@@ -107,6 +123,12 @@
     const date = new Date(`${key}T00:00:00Z`);
     const epoch = new Date("2026-01-01T00:00:00Z");
     return Math.floor((date.getTime() - epoch.getTime()) / 86400000) + 1;
+  }
+
+  function scheduleUtcRollover() {
+    const now = new Date();
+    const nextMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+    window.setTimeout(() => window.location.reload(), Math.max(1000, nextMidnight - now.getTime() + 1000));
   }
 
   function hashSeed(text) {
@@ -137,8 +159,8 @@
     };
   }
 
-  function generateRound(roundNumber) {
-    const random = createRng(hashSeed(`${dateKey}:round:${roundNumber}`));
+  function generateRound(roundNumber, seedPrefix) {
+    const random = createRng(hashSeed(`${seedPrefix}:round:${roundNumber}`));
     const difficulty = ROUND_DIFFICULTY[roundNumber - 1];
     const perfectProgress = 0.22 + random() * 0.56;
     const round = {
@@ -179,7 +201,21 @@
     return round;
   }
 
-  state.rounds = Array.from({ length: ROUND_COUNT }, (_, index) => generateRound(index + 1));
+  function createEndlessSeed() {
+    if (window.crypto && window.crypto.getRandomValues) {
+      const values = new Uint32Array(2);
+      window.crypto.getRandomValues(values);
+      return `${values[0].toString(36)}${values[1].toString(36)}`;
+    }
+    return `${Date.now().toString(36)}-${performance.now().toString(36).replace(".", "")}`;
+  }
+
+  function buildRounds() {
+    const seedPrefix = state.gameMode === "daily"
+      ? dateKey
+      : `endless:${state.endlessSeed}:set:${state.endlessSetNumber}`;
+    state.rounds = Array.from({ length: ROUND_COUNT }, (_, index) => generateRound(index + 1, seedPrefix));
+  }
 
   function getCurrentRound() { return state.rounds[state.roundIndex]; }
   function getProgressAt(elapsed) {
@@ -191,48 +227,98 @@
     return getCurrentRound().orbs.map((orb) => getNormalizedPosition(orb, progress));
   }
 
-  function storageKey() { return `${STORAGE_PREFIX}${dateKey}`; }
+  function dailyStorageKey() { return `${STORAGE_PREFIX}${dateKey}`; }
+
+  function emptyResults() {
+    return Array.from({ length: ROUND_COUNT }, () => null);
+  }
+
+  function sanitizeResults(results) {
+    return Array.from({ length: ROUND_COUNT }, (_, index) => {
+      const result = results[index];
+      if (!result || !Number.isFinite(result.accuracy) || !Number.isFinite(result.score)) return null;
+      return {
+        accuracy: Math.max(0, Math.min(100, result.accuracy)),
+        score: Math.max(0, Math.min(100, Math.round(result.score))),
+        timedOut: result.timedOut === true,
+        details: Array.isArray(result.details) ? result.details.map((detail) => ({
+          distance: Number.isFinite(detail.distance) ? detail.distance : 0,
+          proximity: Number.isFinite(detail.proximity) ? detail.proximity : 0
+        })) : []
+      };
+    });
+  }
+
+  function resetRunState() {
+    cancelAnimation();
+    clearShotEffects();
+    state.mode = "round-ready";
+    state.roundIndex = 0;
+    state.roundResults = emptyResults();
+    state.displayElapsed = 0;
+    state.urgentTimerAnnounced = false;
+    state.lastTimerTick = null;
+  }
+
+  function applySavedProgress(saved) {
+    state.roundResults = sanitizeResults(saved.roundResults);
+    state.roundIndex = Math.max(0, Math.min(ROUND_COUNT - 1, Number(saved.currentRound) || 0));
+    if (saved.completed && state.roundResults.every(Boolean)) state.mode = "finished";
+    else if (state.roundResults[state.roundIndex]) state.mode = "round-result";
+  }
 
   function loadProgress() {
+    resetRunState();
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
-      if (!saved || saved.version !== 3 || saved.dateKey !== dateKey || !Array.isArray(saved.roundResults)) return;
-      state.roundResults = Array.from({ length: ROUND_COUNT }, (_, index) => {
-        const result = saved.roundResults[index];
-        if (!result || !Number.isFinite(result.accuracy) || !Number.isFinite(result.score)) return null;
-        return {
-          accuracy: Math.max(0, Math.min(100, result.accuracy)),
-          score: Math.max(0, Math.min(100, Math.round(result.score))),
-          timedOut: result.timedOut === true,
-          details: Array.isArray(result.details) ? result.details.map((detail) => ({
-            distance: Number.isFinite(detail.distance) ? detail.distance : 0,
-            proximity: Number.isFinite(detail.proximity) ? detail.proximity : 0
-          })) : []
-        };
-      });
-      state.roundIndex = Math.max(0, Math.min(ROUND_COUNT - 1, Number(saved.currentRound) || 0));
-      if (saved.completed && state.roundResults.every(Boolean)) state.mode = "finished";
-      else if (state.roundResults[state.roundIndex]) state.mode = "round-result";
+      if (state.gameMode === "daily") {
+        const saved = JSON.parse(localStorage.getItem(dailyStorageKey()) || "null");
+        if (saved && saved.version === 3 && saved.dateKey === dateKey && Array.isArray(saved.roundResults)) applySavedProgress(saved);
+      } else {
+        const saved = JSON.parse(localStorage.getItem(ENDLESS_STORAGE_KEY) || "null");
+        if (saved && saved.version === 1 && typeof saved.seed === "string" && saved.seed && Number.isInteger(saved.setNumber) && saved.setNumber > 0 && Array.isArray(saved.roundResults)) {
+          state.endlessSeed = saved.seed;
+          state.endlessSetNumber = saved.setNumber;
+          applySavedProgress(saved);
+        } else {
+          state.endlessSeed = createEndlessSeed();
+          state.endlessSetNumber = 1;
+        }
+      }
     } catch (_) {
-      state.roundResults = Array.from({ length: ROUND_COUNT }, () => null);
-      state.roundIndex = 0;
-      state.mode = "round-ready";
+      resetRunState();
+      if (state.gameMode === "endless") {
+        state.endlessSeed = createEndlessSeed();
+        state.endlessSetNumber = 1;
+      }
     }
+    buildRounds();
+  }
+
+  function serializeResults() {
+    return state.roundResults.map((result) => result ? {
+      accuracy: result.accuracy,
+      score: result.score,
+      timedOut: result.timedOut === true,
+      details: result.details.map((detail) => ({ distance: detail.distance, proximity: detail.proximity }))
+    } : null);
   }
 
   function saveProgress() {
-    localStorage.setItem(storageKey(), JSON.stringify({
-      version: 3,
-      dateKey,
+    const shared = {
       currentRound: state.roundIndex,
-      roundResults: state.roundResults.map((result) => result ? {
-        accuracy: result.accuracy,
-        score: result.score,
-        timedOut: result.timedOut === true,
-        details: result.details.map((detail) => ({ distance: detail.distance, proximity: detail.proximity }))
-      } : null),
+      roundResults: serializeResults(),
       completed: state.roundResults.every(Boolean)
-    }));
+    };
+    if (state.gameMode === "daily") {
+      localStorage.setItem(dailyStorageKey(), JSON.stringify({ version: 3, dateKey, ...shared }));
+    } else {
+      localStorage.setItem(ENDLESS_STORAGE_KEY, JSON.stringify({
+        version: 1,
+        seed: state.endlessSeed,
+        setNumber: state.endlessSetNumber,
+        ...shared
+      }));
+    }
   }
 
   function resizeCanvas() {
@@ -555,6 +641,69 @@
     els.roundIndicator.textContent = state.mode === "finished" ? "Complete" : `Challenge ${state.roundIndex + 1} of ${ROUND_COUNT}`;
   }
 
+  function updateModeUi() {
+    const isDaily = state.gameMode === "daily";
+    els.dailyModeButton.classList.toggle("is-active", isDaily);
+    els.endlessModeButton.classList.toggle("is-active", !isDaily);
+    els.dailyModeButton.setAttribute("aria-pressed", String(isDaily));
+    els.endlessModeButton.setAttribute("aria-pressed", String(!isDaily));
+    els.brandEyebrow.textContent = isDaily ? "A daily timing game" : "An endless timing game";
+    els.metaLabel.textContent = isDaily ? "DAILY PUZZLE" : "ENDLESS SET";
+    els.puzzleNumber.textContent = isDaily
+      ? `#${String(puzzleNumber).padStart(3, "0")}`
+      : `#${String(state.endlessSetNumber).padStart(2, "0")}`;
+    els.roundProgress.setAttribute("aria-label", `${isDaily ? "Daily" : "Endless"} challenge progress`);
+    els.footerNote.textContent = isDaily
+      ? "New set of five every day at midnight UTC."
+      : "Every endless set is generated automatically with a fresh five-round difficulty ramp.";
+    els.playAgainButton.hidden = isDaily || state.mode !== "finished";
+    const modeLocked = state.mode === "round-running";
+    els.dailyModeButton.disabled = modeLocked;
+    els.endlessModeButton.disabled = modeLocked;
+  }
+
+  function renderLoadedState() {
+    els.roundResult.hidden = true;
+    els.nextRow.hidden = true;
+    els.finalPanel.hidden = true;
+    updateModeUi();
+    renderProgress();
+    updateOverlay();
+    updateTimer(ROUND_TIME_LIMIT_MS);
+    if (state.mode === "finished") {
+      renderFinalPanel();
+    } else if (state.mode === "round-result") {
+      const result = state.roundResults[state.roundIndex];
+      renderRoundResult(result);
+      els.nextMessage.textContent = `${ROUND_COUNT - state.roundIndex - 1} challenge${ROUND_COUNT - state.roundIndex - 1 === 1 ? "" : "s"} to go.`;
+      els.nextButton.textContent = "Next Challenge";
+      els.nextRow.hidden = false;
+    }
+    resizeCanvas();
+  }
+
+  function switchGameMode(nextMode) {
+    if ((nextMode !== "daily" && nextMode !== "endless") || nextMode === state.gameMode || state.mode === "round-running") return;
+    saveProgress();
+    state.gameMode = nextMode;
+    try { localStorage.setItem(MODE_KEY, nextMode); } catch (_) {}
+    loadProgress();
+    renderLoadedState();
+  }
+
+  function startNextEndlessSet() {
+    if (state.gameMode !== "endless" || state.mode !== "finished") return;
+    state.endlessSetNumber += 1;
+    resetRunState();
+    buildRounds();
+    saveProgress();
+    playAdvanceSound();
+    renderLoadedState();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    els.playfield.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    els.playfield.focus({ preventScroll: true });
+  }
+
   function updateOverlay() {
     const roundLabel = `CHALLENGE ${state.roundIndex + 1} OF ${ROUND_COUNT}`;
     const round = getCurrentRound();
@@ -567,7 +716,7 @@
           ? state.roundIndex < ROUND_COUNT - 1
             ? "Tap the playfield or use the Next Challenge button to continue."
             : "Final challenge locked in."
-          : "Today's run is complete.";
+          : state.gameMode === "daily" ? "Today's run is complete." : "This endless set is complete.";
     els.playfield.setAttribute("aria-label", `Momentle ${roundLabel}. ${accessibleAction}`);
     if (state.mode === "round-ready") {
       els.canvasOverlay.classList.remove("is-result");
@@ -598,8 +747,9 @@
       }
     } else {
       els.canvasOverlay.classList.add("is-hidden");
-      els.canvasStatus.textContent = "Today's five moments are complete.";
+      els.canvasStatus.textContent = state.gameMode === "daily" ? "Today's daily run is complete." : "This endless set is complete.";
     }
+    updateModeUi();
   }
 
   function renderRoundResult(result) {
@@ -629,12 +779,17 @@
 
   function renderFinalPanel() {
     const totals = getFinalTotals();
+    const isDaily = state.gameMode === "daily";
     els.finalPanel.hidden = false;
+    els.finalKicker.textContent = isDaily ? "Today's run" : `Endless set ${state.endlessSetNumber}`;
+    els.finalTitle.textContent = isDaily ? "Five moments, captured." : `Set ${state.endlessSetNumber} complete.`;
+    els.finalSubline.textContent = isDaily ? "Your daily timing report is ready." : "Five new challenges are ready whenever you are.";
     els.finalTotalScore.textContent = `${totals.totalScore}/500`;
     els.finalOverallScore.textContent = `${totals.overallScore}/100`;
     els.finalAverageAccuracy.textContent = formatAccuracy(totals.averageAccuracy);
     els.percentileText.textContent = `Better than ${totals.percentile}% of players`;
     els.scoreTable.innerHTML = state.roundResults.map((result, index) => `<div class="score-row"><span>CHALLENGE ${index + 1}</span><strong>${formatAccuracy(result.accuracy)}</strong><strong class="round-score">${formatScore(result.score)}</strong></div>`).join("");
+    els.playAgainButton.hidden = isDaily;
     drawDistribution(totals.totalScore);
   }
 
@@ -809,7 +964,8 @@
   async function copyResult() {
     const totals = getFinalTotals();
     const lines = state.roundResults.map((result, index) => `${index + 1}: ${result.score}/100`);
-    const text = [`MOMENTLE #${puzzleNumber}`, ...lines, `Total: ${totals.totalScore}/500`, `Overall: ${totals.overallScore}/100`, `Better than ${totals.percentile}% (simulated)`].join("\n");
+    const heading = state.gameMode === "daily" ? `MOMENTLE #${puzzleNumber}` : `MOMENTLE ENDLESS SET #${state.endlessSetNumber}`;
+    const text = [heading, ...lines, `Total: ${totals.totalScore}/500`, `Overall: ${totals.overallScore}/100`, `Better than ${totals.percentile}% (simulated)`].join("\n");
     try {
       let copied = false;
       if (navigator.clipboard && window.isSecureContext) {
@@ -843,6 +999,9 @@
   els.playfield.addEventListener("pointerup", (event) => { event.preventDefault(); handlePlayfieldInput(); });
   els.playfield.addEventListener("keydown", handlePlayfieldKey);
   els.nextButton.addEventListener("click", advanceRound);
+  els.dailyModeButton.addEventListener("click", () => switchGameMode("daily"));
+  els.endlessModeButton.addEventListener("click", () => switchGameMode("endless"));
+  els.playAgainButton.addEventListener("click", startNextEndlessSet);
   els.copyButton.addEventListener("click", copyResult);
   els.helpButton.addEventListener("click", openTutorial);
   els.soundButton.addEventListener("click", toggleSound);
@@ -852,20 +1011,9 @@
   els.tutorialDialog.addEventListener("close", () => localStorage.setItem(TUTORIAL_KEY, "true"));
   window.addEventListener("resize", resizeCanvas);
 
-  els.puzzleNumber.textContent = `#${String(puzzleNumber).padStart(3, "0")}`;
   updateSoundButton();
+  scheduleUtcRollover();
   loadProgress();
-  renderProgress();
-  updateOverlay();
-  updateTimer(state.mode === "round-running" ? ROUND_TIME_LIMIT_MS - state.displayElapsed : ROUND_TIME_LIMIT_MS);
-  if (state.mode === "finished") renderFinalPanel();
-  else if (state.mode === "round-result") {
-    const result = state.roundResults[state.roundIndex];
-    renderRoundResult(result);
-    els.nextMessage.textContent = `${ROUND_COUNT - state.roundIndex - 1} challenge${ROUND_COUNT - state.roundIndex - 1 === 1 ? "" : "s"} to go.`;
-    els.nextButton.textContent = "Next Challenge";
-    els.nextRow.hidden = false;
-  }
-  resizeCanvas();
+  renderLoadedState();
   if (!localStorage.getItem(TUTORIAL_KEY)) window.setTimeout(openTutorial, 250);
 })();

@@ -41,6 +41,11 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid var(--o
 .app-shell { width: min(100% - 32px, 960px); margin: 0 auto; padding: 34px 0 42px; }
 .topbar, .brand-lockup, .puzzle-meta, .round-pill, .result-heading, .final-actions, .summary-grid, .next-row { display: flex; align-items: center; }
 .topbar { justify-content: space-between; gap: 24px; }
+.mode-switch { display: inline-flex; gap: 4px; margin-top: 34px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.mode-button { min-width: 84px; cursor: pointer; padding: 9px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: .76rem; font-weight: 800; letter-spacing: .04em; transition: background .18s ease, color .18s ease, box-shadow .18s ease; }
+.mode-button:hover { color: var(--text); }
+.mode-button.is-active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(94,231,196,.3); }
+.mode-button:disabled { cursor: not-allowed; opacity: .45; }
 .brand-lockup { gap: 12px; }
 .brand-mark { display: flex; align-items: flex-end; gap: 4px; width: 26px; height: 26px; }
 .brand-mark span { display: block; width: 6px; border-radius: 99px; background: var(--accent); box-shadow: 0 0 15px rgba(94,231,196,.55); }
@@ -53,6 +58,7 @@ h1 { margin: 0; font-size: 1.06rem; letter-spacing: .19em; font-weight: 850; }
 .puzzle-meta { flex-direction: column; align-items: flex-end; gap: 3px; }
 .puzzle-meta strong { color: var(--accent); font-size: .98rem; letter-spacing: .08em; }
 .intro { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px; margin: 74px 0 20px; }
+.mode-switch + .intro { margin-top: 38px; }
 .intro > div:first-child { flex: 1 1 620px; }
 .kicker { color: var(--accent); margin-bottom: 11px; }
 h2 { margin: 0; max-width: 680px; font-size: clamp(2rem, 5vw, 3.65rem); line-height: .98; letter-spacing: -.055em; }
@@ -151,6 +157,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #distributionCanvas { width: 100%; height: 150px; margin-top: 12px; }
 .mock-note { margin: 10px 0 0; color: var(--subtle); font-size: .7rem; }
 .final-actions { grid-column: 1 / -1; justify-content: flex-end; gap: 13px; }
+.final-actions .secondary-button { min-width: 150px; }
 .text-button { padding: 10px 2px; background: transparent; color: var(--muted); font-size: .82rem; }
 .text-button:hover { color: var(--text); }
 .footer-note { margin: 22px 0 0; color: var(--subtle); font-size: .72rem; text-align: center; }
@@ -207,6 +214,9 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 @media (max-width: 640px) {
   .app-shell { width: min(100% - 22px, 560px); padding-top: 24px; }
   .intro { align-items: flex-start; flex-direction: column; gap: 14px; margin-top: 52px; }
+  .mode-switch { width: 100%; margin-top: 28px; }
+  .mode-button { flex: 1; }
+  .mode-switch + .intro { margin-top: 34px; }
   .intro > div:first-child { flex: 0 1 auto; }
   .round-pill { align-self: flex-start; }
   .help-button { align-self: flex-start; }
@@ -229,7 +239,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   .tutorial-shell { padding: 24px 20px 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .canvas-overlay, .secondary-button, .text-button, .help-button { transition: none; }
+  .canvas-overlay, .secondary-button, .text-button, .help-button, .mode-button { transition: none; }
   .canvas-wrap.bad-shot, .canvas-wrap.perfect-shot { animation: none; }
   .sparkle, .shot-ring, .gold-confetti, .celebration-label { display: none; }
 }
