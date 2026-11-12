@@ -4,7 +4,7 @@
   const ROUND_COUNT = 5;
   const ORB_COUNT = 5;
   const START_LOCK_MS = 300;
-  const ROUND_TIME_LIMIT_MS = 25000;
+  const ROUND_TIME_LIMIT_MS = 20000;
   const STORAGE_PREFIX = "momentle-v3-progress-";
   const TUTORIAL_KEY = "momentle-tutorial-seen-v1";
   const SOUND_KEY = "momentle-sound-enabled-v1";
@@ -18,7 +18,7 @@
   const TUTORIAL_STEPS = [
     { title: "Match every orb", text: "Each glowing orb has a ring in the same colour. Watch how their paths cross the rings." },
     { title: "Ignore the decoys", text: "A single orb may land perfectly while the others miss. Wait for the one moment when all five align." },
-    { title: "Lock it in", text: "Tap once to start, then tap again to score. You get one chance and 25 seconds; each round gets faster." }
+    { title: "Lock it in", text: "Tap once to start, then tap again to score. You get one chance and 20 seconds; each round gets faster." }
   ];
   const COLOURS = [
     { name: "mint", value: "#5ee7c4" },
@@ -474,7 +474,7 @@
 
   function showShotEffects(result, positions) {
     clearShotEffects();
-    if (result.timedOut || result.accuracy < 50) {
+    if (result.timedOut || result.score < 50) {
       els.playfield.classList.add("bad-shot");
     } else if (result.accuracy >= 75) {
       els.playfield.classList.add("good-shot");
