@@ -379,19 +379,24 @@
           : "Today's run is complete.";
     els.playfield.setAttribute("aria-label", `Momentle ${roundLabel}. ${accessibleAction}`);
     if (state.mode === "round-ready") {
+      els.canvasOverlay.classList.remove("is-result");
       els.canvasOverlay.classList.remove("is-hidden");
       els.overlayMessage.textContent = "Tap to start";
       els.overlayHint.textContent = `${round.difficultyLabel} · ${(round.loopMs / 1000).toFixed(2).replace(/0$/, "")}s loop · ${round.decoyOrbs} decoy ${round.decoyOrbs === 1 ? "orb" : "orbs"}`;
       els.canvasStatus.textContent = "Ready when you are.";
     } else if (state.mode === "round-running") {
+      els.canvasOverlay.classList.remove("is-result");
       els.canvasOverlay.classList.add("is-hidden");
       els.canvasStatus.textContent = "Tap anywhere to lock it in.";
     } else if (state.mode === "round-result") {
       if (state.roundIndex < ROUND_COUNT - 1) {
+        const result = state.roundResults[state.roundIndex];
+        els.canvasOverlay.classList.add("is-result");
         els.canvasOverlay.classList.remove("is-hidden");
         els.overlayMessage.textContent = "Tap for next challenge";
-        els.overlayHint.textContent = "Your shot is locked in. Keep going.";
+        els.overlayHint.textContent = `Score ${formatScore(result.score)} · Accuracy ${formatAccuracy(result.accuracy)}`;
       } else {
+        els.canvasOverlay.classList.remove("is-result");
         els.canvasOverlay.classList.add("is-hidden");
       }
       const result = state.roundResults[state.roundIndex];
