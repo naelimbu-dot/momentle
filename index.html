@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08121f" />
+    <title>Momentle — Find the perfect moment</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <p class="eyebrow">A daily timing game</p>
+            <h1>MOMENTLE</h1>
+          </div>
+        </div>
+        <div class="puzzle-meta">
+          <span class="meta-label">DAILY PUZZLE</span>
+          <strong id="puzzleNumber">#001</strong>
+        </div>
+      </header>
+
+      <section class="intro" aria-labelledby="gameTitle">
+        <div>
+          <p class="kicker">One pause. Five alignments.</p>
+          <h2 id="gameTitle">Freeze time at the perfect moment.</h2>
+          <p class="instructions">Watch the orbs orbit their paths, then tap <strong>FREEZE</strong> when every orb is closest to its matching ring.</p>
+        </div>
+        <div class="attempt-pill" aria-live="polite">
+          <span class="attempt-dot" aria-hidden="true"></span>
+          <span id="attemptIndicator">3 attempts</span>
+        </div>
+      </section>
+
+      <section class="game-card" aria-label="Momentle game board">
+        <div class="canvas-wrap">
+          <canvas id="gameCanvas" aria-label="Five coloured orbs moving toward matching rings"></canvas>
+          <div class="canvas-status" id="canvasStatus" role="status" aria-live="polite">Ready when you are.</div>
+        </div>
+
+        <div class="control-row">
+          <button class="primary-button" id="mainButton" type="button">Start</button>
+          <div class="live-score" aria-live="polite">
+            <span class="live-score-label">BEST</span>
+            <strong id="bestScore">—</strong>
+          </div>
+        </div>
+
+        <div class="attempt-result" id="attemptResult" hidden>
+          <div class="result-heading">
+            <span class="result-label" id="resultLabel">Attempt 1</span>
+            <strong id="resultScore">0.0%</strong>
+          </div>
+          <div class="distance-list" id="distanceList"></div>
+        </div>
+      </section>
+
+      <section class="final-panel" id="finalPanel" hidden aria-labelledby="finalTitle">
+        <div class="final-copy">
+          <p class="kicker">Today's alignment</p>
+          <h2 id="finalTitle">You found your moment.</h2>
+          <p id="finalRating">Perfect timing.</p>
+        </div>
+        <div class="score-summary">
+          <div class="summary-score"><span>BEST SCORE</span><strong id="finalBestScore">0.0%</strong></div>
+          <div class="summary-attempts" id="summaryAttempts"></div>
+        </div>
+        <div class="final-actions">
+          <button class="secondary-button" id="replayButton" type="button">Watch Perfect Moment</button>
+          <button class="text-button" id="copyButton" type="button">Copy Result</button>
+        </div>
+      </section>
+
+      <footer class="footer-note">New moment every day at midnight UTC.</footer>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
