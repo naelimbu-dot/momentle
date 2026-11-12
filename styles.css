@@ -13,7 +13,18 @@
 }
 
 * { box-sizing: border-box; }
-html { min-width: 320px; background: var(--bg-deep); }
+html {
+  min-width: 320px;
+  background: var(--bg-deep);
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(94, 231, 196, .58) rgba(5, 14, 24, .92);
+}
+html::-webkit-scrollbar { width: 10px; }
+html::-webkit-scrollbar-track { background: rgba(5, 14, 24, .92); }
+html::-webkit-scrollbar-thumb { border: 2px solid rgba(5, 14, 24, .92); border-radius: 99px; background: rgba(94, 231, 196, .58); }
+html::-webkit-scrollbar-thumb:hover { background: rgba(94, 231, 196, .82); }
+html::-webkit-scrollbar-button { display: none; height: 0; }
 body {
   min-width: 320px;
   min-height: 100vh;
