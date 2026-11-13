@@ -18,9 +18,9 @@
     { loopMs: 2100, decoyOrbs: 5, label: "Maximum" }
   ];
   const TUTORIAL_STEPS = [
-    { title: "Match every orb", text: "Each glowing orb has a ring in the same colour. Watch how their paths cross the rings." },
-    { title: "Ignore the decoys", text: "A single orb may land perfectly while the others miss. Wait for the one moment when all five align." },
-    { title: "Lock it in", text: "Tap once to start, then tap again to score. You get one chance and 20 seconds; each round gets faster." }
+    { title: "Learn the pairs", text: "Every glowing orb has a dashed ring in the same colour. Watch each orb travel toward its own ring." },
+    { title: "Do not tap for one", text: "One orb may hit its ring while the others are far away. That is a decoy—keep watching." },
+    { title: "Tap when all five match", text: "Tap the board once to start. Tap again when all five orbs sit inside their matching rings. You have one chance and 20 seconds." }
   ];
   const COLOURS = [
     { name: "mint", value: "#5ee7c4" },
@@ -39,7 +39,6 @@
     overlayMessage: document.getElementById("overlayMessage"),
     overlayHint: document.getElementById("overlayHint"),
     canvasStatus: document.getElementById("canvasStatus"),
-    brandEyebrow: document.getElementById("brandEyebrow"),
     metaLabel: document.getElementById("metaLabel"),
     puzzleNumber: document.getElementById("puzzleNumber"),
     dailyModeButton: document.getElementById("dailyModeButton"),
@@ -86,11 +85,13 @@
     tutorialDialog: document.getElementById("tutorialDialog"),
     tutorialClose: document.getElementById("tutorialClose"),
     tutorialSkip: document.getElementById("tutorialSkip"),
+    tutorialPrevious: document.getElementById("tutorialPrevious"),
     tutorialNext: document.getElementById("tutorialNext"),
     tutorialNumber: document.getElementById("tutorialNumber"),
     tutorialStepTitle: document.getElementById("tutorialStepTitle"),
     tutorialStepText: document.getElementById("tutorialStepText"),
-    tutorialDots: document.getElementById("tutorialDots")
+    tutorialDots: document.getElementById("tutorialDots"),
+    tutorialScenes: [...document.querySelectorAll("[data-tutorial-scene]")]
   };
 
   const ctx = els.canvas.getContext("2d");
@@ -656,7 +657,6 @@
     els.endlessModeButton.classList.toggle("is-active", !isDaily);
     els.dailyModeButton.setAttribute("aria-pressed", String(isDaily));
     els.endlessModeButton.setAttribute("aria-pressed", String(!isDaily));
-    els.brandEyebrow.textContent = isDaily ? "A daily timing game" : "An endless timing game";
     els.metaLabel.textContent = isDaily ? "DAILY PUZZLE" : "ENDLESS SET";
     els.puzzleNumber.textContent = isDaily
       ? `#${String(puzzleNumber).padStart(3, "0")}`
@@ -994,7 +994,9 @@
     els.tutorialNumber.textContent = String(state.tutorialStep + 1);
     els.tutorialStepTitle.textContent = step.title;
     els.tutorialStepText.textContent = step.text;
+    els.tutorialPrevious.disabled = state.tutorialStep === 0;
     els.tutorialNext.textContent = state.tutorialStep === TUTORIAL_STEPS.length - 1 ? "Got it" : "Next";
+    els.tutorialScenes.forEach((scene, index) => scene.classList.toggle("is-active", index === state.tutorialStep));
     els.tutorialDots.innerHTML = TUTORIAL_STEPS.map((_, index) => `<span class="tutorial-dot ${index === state.tutorialStep ? "current" : ""}" aria-label="Step ${index + 1}${index === state.tutorialStep ? ", current" : ""}"></span>`).join("");
   }
 
@@ -1015,6 +1017,12 @@
       state.tutorialStep += 1;
       renderTutorialStep();
     } else closeTutorial();
+  }
+
+  function previousTutorialStep() {
+    if (state.tutorialStep === 0) return;
+    state.tutorialStep -= 1;
+    renderTutorialStep();
   }
 
   async function copyResult() {
@@ -1066,6 +1074,7 @@
   els.soundButton.addEventListener("click", toggleSound);
   els.tutorialClose.addEventListener("click", closeTutorial);
   els.tutorialSkip.addEventListener("click", closeTutorial);
+  els.tutorialPrevious.addEventListener("click", previousTutorialStep);
   els.tutorialNext.addEventListener("click", advanceTutorial);
   els.tutorialDialog.addEventListener("close", () => localStorage.setItem(TUTORIAL_KEY, "true"));
   window.addEventListener("resize", resizeCanvas);
