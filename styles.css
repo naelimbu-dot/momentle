@@ -175,6 +175,17 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .tutorial-dot.current { background: var(--accent); box-shadow: 0 0 10px rgba(94,231,196,.5); }
 .tutorial-actions { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 18px; }
 .tutorial-actions .secondary-button { min-width: 110px; }
+.run-complete { width: min(calc(100% - 28px), 500px); padding: 0; border: 1px solid rgba(94,231,196,.34); border-radius: 24px; background: #0b1a2a; color: var(--text); box-shadow: 0 30px 100px rgba(0,0,0,.64), 0 0 42px rgba(94,231,196,.09); }
+.run-complete::backdrop { background: rgba(1,7,12,.8); backdrop-filter: blur(7px); }
+.run-complete-shell { position: relative; padding: 30px; text-align: center; }
+.run-complete .kicker { margin-bottom: 10px; }
+.run-complete h2 { max-width: none; font-size: clamp(1.7rem, 6vw, 2.45rem); }
+.run-final-score { display: block; margin-top: 22px; color: var(--accent); font-size: clamp(3rem, 12vw, 5rem); line-height: .92; letter-spacing: -.065em; text-shadow: 0 0 30px rgba(94,231,196,.22); }
+.run-final-detail { margin: 14px 0 0; color: var(--muted); font-size: .88rem; }
+.run-complete-percentile { display: block; margin-top: 11px; color: var(--accent); font-size: .78rem; }
+.run-complete-prompt { margin: 25px 0 0; color: var(--text); font-size: 1.05rem; font-weight: 750; }
+.run-complete-actions { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; }
+.run-complete-actions .secondary-button { min-width: 165px; }
 @keyframes sparkle-burst {
   0% { opacity: 0; transform: translate(0, 0) scale(.2) rotate(0deg); }
   18% { opacity: 1; }
@@ -237,6 +248,9 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   .overlay-card { min-width: min(88%, 300px); padding: 18px; }
   .timer-badge { top: 10px; right: 10px; }
   .tutorial-shell { padding: 24px 20px 20px; }
+  .run-complete-shell { padding: 28px 20px 22px; }
+  .run-complete-actions { align-items: stretch; flex-direction: column-reverse; }
+  .run-complete-actions .secondary-button { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .canvas-overlay, .secondary-button, .text-button, .help-button, .mode-button { transition: none; }

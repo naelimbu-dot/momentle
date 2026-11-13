@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#08121f" />
     <title>Momentle — Find the perfect moment</title>
-    <link rel="stylesheet" href="styles.css?v=7" />
+    <link rel="stylesheet" href="styles.css?v=8" />
   </head>
   <body>
     <main class="app-shell">
@@ -119,6 +119,22 @@
       <footer class="footer-note" id="footerNote">New set of five every day at midnight UTC.</footer>
     </main>
 
+    <dialog class="run-complete" id="completionDialog" aria-labelledby="completionTitle">
+      <div class="run-complete-shell">
+        <button class="tutorial-close" id="completionClose" type="button" aria-label="Close completed-run summary">×</button>
+        <p class="kicker" id="completionKicker">Run complete</p>
+        <h2 id="completionTitle">Final score</h2>
+        <strong class="run-final-score" id="completionScore">0/500</strong>
+        <p class="run-final-detail" id="completionDetail">Overall 0/100 · Average accuracy 0.0%</p>
+        <strong class="run-complete-percentile" id="completionPercentile">Simulated: better than 1% of players</strong>
+        <p class="run-complete-prompt" id="completionPrompt">Ready for another five?</p>
+        <div class="run-complete-actions">
+          <button class="text-button" id="completionViewResults" type="button">View Full Results</button>
+          <button class="secondary-button" id="completionPrimaryAction" type="button">Play Another Set</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog class="tutorial" id="tutorialDialog" aria-labelledby="tutorialTitle">
       <div class="tutorial-shell">
         <button class="tutorial-close" id="tutorialClose" type="button" aria-label="Close tutorial">×</button>
@@ -138,6 +154,6 @@
         </div>
       </div>
     </dialog>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>

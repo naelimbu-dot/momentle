@@ -67,6 +67,15 @@
     playAgainButton: document.getElementById("playAgainButton"),
     copyButton: document.getElementById("copyButton"),
     footerNote: document.getElementById("footerNote"),
+    completionDialog: document.getElementById("completionDialog"),
+    completionClose: document.getElementById("completionClose"),
+    completionKicker: document.getElementById("completionKicker"),
+    completionScore: document.getElementById("completionScore"),
+    completionDetail: document.getElementById("completionDetail"),
+    completionPercentile: document.getElementById("completionPercentile"),
+    completionPrompt: document.getElementById("completionPrompt"),
+    completionViewResults: document.getElementById("completionViewResults"),
+    completionPrimaryAction: document.getElementById("completionPrimaryAction"),
     effectsLayer: document.getElementById("effectsLayer"),
     timerBadge: document.getElementById("timerBadge"),
     timerValue: document.getElementById("timerValue"),
@@ -684,6 +693,7 @@
 
   function switchGameMode(nextMode) {
     if ((nextMode !== "daily" && nextMode !== "endless") || nextMode === state.gameMode || state.mode === "round-running") return;
+    closeCompletionDialog();
     saveProgress();
     state.gameMode = nextMode;
     try { localStorage.setItem(MODE_KEY, nextMode); } catch (_) {}
@@ -693,6 +703,7 @@
 
   function startNextEndlessSet() {
     if (state.gameMode !== "endless" || state.mode !== "finished") return;
+    closeCompletionDialog();
     state.endlessSetNumber += 1;
     resetRunState();
     buildRounds();
@@ -793,6 +804,50 @@
     drawDistribution(totals.totalScore);
   }
 
+  function showCompletionDialog() {
+    if (state.mode !== "finished") return;
+    const totals = getFinalTotals();
+    const isDaily = state.gameMode === "daily";
+    els.completionKicker.textContent = isDaily ? `Daily puzzle #${puzzleNumber} complete` : `Endless set ${state.endlessSetNumber} complete`;
+    els.completionScore.textContent = `${totals.totalScore}/500`;
+    els.completionDetail.textContent = `Overall ${totals.overallScore}/100 · Average accuracy ${formatAccuracy(totals.averageAccuracy)}`;
+    els.completionPercentile.textContent = `Simulated: better than ${totals.percentile}% of players`;
+    els.completionPrompt.textContent = isDaily ? "Daily complete. Keep the momentum going?" : "Ready for another five?";
+    els.completionPrimaryAction.textContent = isDaily ? "Play Endless" : "Play Another Set";
+    els.completionClose.setAttribute("aria-label", isDaily ? "Close Daily results" : "Close Endless set results");
+    if (!els.completionDialog.open) els.completionDialog.showModal();
+  }
+
+  function closeCompletionDialog(showResults = false) {
+    if (els.completionDialog.open) els.completionDialog.close();
+    if (showResults) {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      els.finalPanel.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
+  }
+
+  function enterEndlessFromDaily() {
+    if (state.gameMode !== "daily" || state.mode !== "finished") return;
+    closeCompletionDialog();
+    saveProgress();
+    state.gameMode = "endless";
+    try { localStorage.setItem(MODE_KEY, "endless"); } catch (_) {}
+    loadProgress();
+    if (state.mode === "finished") {
+      startNextEndlessSet();
+      return;
+    }
+    renderLoadedState();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    els.playfield.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    els.playfield.focus({ preventScroll: true });
+  }
+
+  function handleCompletionPrimary() {
+    if (state.gameMode === "daily") enterEndlessFromDaily();
+    else startNextEndlessSet();
+  }
+
   function drawDistribution(totalScore) {
     const rect = els.distributionCanvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -889,6 +944,7 @@
       state.mode = "finished";
       els.nextRow.hidden = true;
       renderFinalPanel();
+      window.setTimeout(showCompletionDialog, 500);
     } else {
       els.nextMessage.textContent = `${ROUND_COUNT - state.roundIndex - 1} challenge${ROUND_COUNT - state.roundIndex - 1 === 1 ? "" : "s"} to go.`;
       els.nextButton.textContent = `Next Challenge`;
@@ -1002,6 +1058,9 @@
   els.dailyModeButton.addEventListener("click", () => switchGameMode("daily"));
   els.endlessModeButton.addEventListener("click", () => switchGameMode("endless"));
   els.playAgainButton.addEventListener("click", startNextEndlessSet);
+  els.completionPrimaryAction.addEventListener("click", handleCompletionPrimary);
+  els.completionViewResults.addEventListener("click", () => closeCompletionDialog(true));
+  els.completionClose.addEventListener("click", () => closeCompletionDialog());
   els.copyButton.addEventListener("click", copyResult);
   els.helpButton.addEventListener("click", openTutorial);
   els.soundButton.addEventListener("click", toggleSound);

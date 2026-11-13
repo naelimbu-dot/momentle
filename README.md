@@ -5,7 +5,8 @@ Momentle is a frontend-only timing game with Daily and Endless modes. Each UTC d
 ## Rules and scoring
 
 - You get five challenges per UTC day.
-- Endless mode generates unlimited five-challenge sets and offers **Play Another Set** after every summary.
+- Endless mode generates unlimited five-challenge sets. Finishing challenge five opens a final-score prompt with **Play Another Set**, while the full summary remains available underneath.
+- Finishing the Daily also opens a score-and-percentile prompt with **Play Endless**. The percentile remains explicitly simulated until the future leaderboard backend is connected.
 - Every Daily or Endless set uses the same deliberate difficulty ramp: faster loops and more decoy orbs from challenge one through five.
 - Each challenge has exactly one scored attempt and no retries.
 - Each challenge has a 20-second limit. Running out of time scores zero points.
